@@ -8,8 +8,8 @@ import os
 app = Flask(__name__)
 
 # Retrieve API credentials from environment variables
-API_KEY = os.getenv('COINEX_API_KEY')
-API_SECRET = os.getenv('COINEX_API_SECRET')
+API_KEY = os.getenv('FF25668A6AE44E409DF23EFA48D7C062')
+API_SECRET = os.getenv('A65A6E14A1D3C615EF169BC4896BE7206105988F3C6FA48F')
 
 # CoinEx API endpoint for market orders
 COINEX_API_URL = "https://api.coinex.com/v1/order/market"
