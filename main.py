@@ -1,65 +1,48 @@
-import os
-import time
-import hmac
-import hashlib
-import json
+from flask import Flask, request
 import requests
-from flask import Flask, request, jsonify
+import os
 
 app = Flask(__name__)
 
-# ENV variables from Render
-ACCESS_ID = os.getenv("COINEX_ACCESS_ID")
-SECRET_KEY = os.getenv("COINEX_SECRET_KEY")
+# Load keys from environment variables
+API_KEY = os.environ.get("COINEX_API_KEY")
+SECRET_KEY = os.environ.get("COINEX_SECRET_KEY")
 
-# CoinEx API endpoint
-BASE_URL = "https://api.coinex.com/v1/order/market"
-
-def generate_signature(params, secret_key):
-    param_str = '&'.join([f"{k}={params[k]}" for k in sorted(params)])
-    sign_str = param_str + f"&secret_key={secret_key}"
-    return hmac.new(secret_key.encode(), sign_str.encode(), hashlib.sha256).hexdigest().upper()
+BASE_URL = "https://api.coinex.com/v1/order/limit"
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
-    print("Received data:", data)
 
-    try:
-        action = data["actions"][0].lower()  # "buy" or "sell"
-        symbol = data["symbol"]              # e.g. "BTCUSDT"
-        amount = float(data["amount"])       # e.g. 0.0005
-    except Exception as e:
-        return f"Invalid payload format: {str(e)}", 400
+    if not data:
+        return "No JSON received", 400
 
-    # CoinEx needs symbol with dash: BTC-USDT instead of BTCUSDT
-    if "-" not in symbol:
-        symbol = symbol[:3] + "-" + symbol[3:]
+    actions = data.get("actions", [])
+    amount = data.get("amount")
+    symbol = data.get("symbol")
 
-    market = symbol.upper()
-    timestamp = int(time.time())
+    print(f"Received data: {data}")
 
-    params = {
-        "access_id": ACCESS_ID,
-        "amount": str(amount),
-        "market": market,
-        "type": action,
-        "tonce": timestamp,
-    }
+    for action in actions:
+        side = "buy" if action == "buy" else "sell"
+        payload = {
+            "market": symbol,
+            "type": side,
+            "amount": amount,
+            "price": "99999999" if side == "buy" else "0.00000001"
+        }
 
-    signature = generate_signature(params, SECRET_KEY)
-    headers = {
-        "Authorization": signature,
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
+        headers = {
+            "Content-Type": "application/json",
+            "X-CoinEx-Key": API_KEY,
+            "X-CoinEx-Signature": SECRET_KEY
+        }
 
-    try:
-        response = requests.post(BASE_URL, data=params, headers=headers)
-        print("CoinEx API response:", response.text)
-        return jsonify(response.json()), response.status_code
-    except Exception as e:
-        print("Request to CoinEx failed:", e)
-        return f"Request failed: {str(e)}", 500
+        response = requests.post(BASE_URL, json=payload, headers=headers)
+        print(f"CoinEx API response: {response.text}")
 
-if __name__ == "__main__":
-    app.run(debug=False, port=10000)
+    return "Order processed", 200
+
+@app.route("/", methods=["GET"])
+def home():
+    return "CoinEx Trading Bot is running.", 200
