@@ -1,19 +1,17 @@
+import os
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-@app.route('/', methods=['POST'])
+@app.route("/", methods=["POST"])
 def webhook():
-    data = request.json
-    side = data.get("side", "").upper()
-    symbol = data.get("symbol", "UNKNOWN")
-    amount = data.get("amount", 0)
+    data = request.get_json()
+    side = data.get("side")
+    symbol = data.get("symbol")
+    amount = data.get("amount")
+    print(f"Received alert: {side.upper()} {amount} of {symbol}")
+    return jsonify({"status": "success"}), 200
 
-    print(f"Received alert: {side} {amount} of {symbol}")
-
-    # Placeholder for sending to CoinEx
-    return jsonify({"status": "received"}), 200
-
-@app.route('/', methods=['GET'])
-def health_check():
-    return "OK", 200
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
