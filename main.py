@@ -9,8 +9,7 @@ def index():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid or missing JSON"}), 400
+    print("Received raw payload:", data)
 
     side = data.get("side", "").upper()
     amount = data.get("amount", "N/A")
