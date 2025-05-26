@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: thank-you-hashem
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python main.py"
+    envVars:
+      - key: FF25668A6AE44E409DF23EFA48D7C062
+        value: A65A6E14A1D3C615EF169BC4896BE7206105988F3C6FA48F
+      - key: FF25668A6AE44E409DF23EFA48D7C062
+        value: A65A6E14A1D3C615EF169BC4896BE7206105988F3C6FA48F
