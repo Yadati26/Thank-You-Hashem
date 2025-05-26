@@ -4,22 +4,16 @@ app = Flask(__name__)
 
 @app.route('/', methods=['POST'])
 def webhook():
-    data = request.get_json()
-    if not data:
-        return jsonify({'error': 'Invalid JSON'}), 400
+    data = request.json
+    side = data.get("side", "").upper()
+    symbol = data.get("symbol", "UNKNOWN")
+    amount = data.get("amount", 0)
 
-    symbol = data.get('symbol')
-    side = data.get('side')
-    amount = data.get('amount')
-    api_key = data.get('api_key')
-    secret_key = data.get('secret_key')
+    print(f"Received alert: {side} {amount} of {symbol}")
 
-    print(f"Received alert: {side.upper()} {amount} of {symbol}")
-    print(f"API Key: {api_key}")
-    print(f"Secret Key: {secret_key}")
+    # Placeholder for sending to CoinEx
+    return jsonify({"status": "received"}), 200
 
-    # Placeholder: you will replace this with real CoinEx trading logic
-    return jsonify({'status': 'received'}), 200
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+@app.route('/', methods=['GET'])
+def health_check():
+    return "OK", 200
