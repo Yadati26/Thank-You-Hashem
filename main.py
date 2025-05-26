@@ -1,17 +1,23 @@
-import os
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-@app.route("/", methods=["POST"])
+@app.route("/", methods=["GET"])
+def index():
+    return "Thank You, Hashem bot is live."
+
+@app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
-    side = data.get("side")
-    symbol = data.get("symbol")
-    amount = data.get("amount")
-    print(f"Received alert: {side.upper()} {amount} of {symbol}")
+    if not data:
+        return jsonify({"error": "Invalid or missing JSON"}), 400
+
+    side = data.get("side", "").upper()
+    amount = data.get("amount", "N/A")
+    symbol = data.get("symbol", "N/A")
+
+    print(f"Received alert: {side} {amount} of {symbol}")
     return jsonify({"status": "success"}), 200
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=10000)
