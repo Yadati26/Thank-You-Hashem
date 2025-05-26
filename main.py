@@ -1,82 +1,25 @@
 from flask import Flask, request, jsonify
-import requests
-import hmac
-import hashlib
-import time
-import json
 
 app = Flask(__name__)
 
-COINEX_BASE_URL = "https://api.coinex.com/v1"
-
-def coinex_request(api_key, secret_key, endpoint, method="POST", params=None):
-    if params is None:
-        params = {}
-
-    timestamp = int(time.time())
-    params.update({
-        "access_id": api_key,
-        "tonce": timestamp
-    })
-
-    sorted_params = sorted(params.items())
-    query_str = '&'.join(f"{k}={v}" for k, v in sorted_params)
-    signature = hmac.new(
-        secret_key.encode(),
-        query_str.encode(),
-        hashlib.sha256
-    ).hexdigest().upper()
-
-    headers = {
-        "Authorization": signature
-    }
-
-    url = f"{COINEX_BASE_URL}{endpoint}"
-
-    if method.upper() == "POST":
-        response = requests.post(url, headers=headers, data=params)
-    else:
-        response = requests.get(url, headers=headers, params=params)
-
-    return response.json()
-
-@app.route("/", methods=["POST"])
+@app.route('/', methods=['POST'])
 def webhook():
-    try:
-        data = request.get_json()
-        symbol = data.get("symbol", "BTCUSDT")
-        side = data.get("side", "buy").lower()
-        amount = float(data.get("amount", 0))
-        api_key = data["api_key"]
-        secret_key = data["secret_key"]
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Invalid JSON'}), 400
 
-        if not api_key or not secret_key:
-            return jsonify({"error": "Missing API credentials"}), 400
+    symbol = data.get('symbol')
+    side = data.get('side')
+    amount = data.get('amount')
+    api_key = data.get('api_key')
+    secret_key = data.get('secret_key')
 
-        market = symbol.lower()
-        endpoint = "/order/limit"
+    print(f"Received alert: {side.upper()} {amount} of {symbol}")
+    print(f"API Key: {api_key}")
+    print(f"Secret Key: {secret_key}")
 
-        if side == "buy":
-            price_resp = requests.get(f"{COINEX_BASE_URL}/market/ticker?market={market}")
-            price = float(price_resp.json()["data"]["ticker"]["buy"])
-        elif side == "sell":
-            price_resp = requests.get(f"{COINEX_BASE_URL}/market/ticker?market={market}")
-            price = float(price_resp.json()["data"]["ticker"]["sell"])
-        else:
-            return jsonify({"error": "Invalid side"}), 400
+    # Placeholder: you will replace this with real CoinEx trading logic
+    return jsonify({'status': 'received'}), 200
 
-        order_data = {
-            "market": market,
-            "type": side,
-            "amount": amount,
-            "price": round(price, 2)
-        }
-
-        res = coinex_request(api_key, secret_key, endpoint, "POST", order_data)
-        return jsonify(res)
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == "__main__":
-    app.run(debug=True, port=8000)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8000)
