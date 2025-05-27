@@ -33,14 +33,7 @@ def place_order(market, side, amount):
         "tonce": int(time.time() * 1000),
     }
     params["sign"] = sign(params)
-
-    # 🔍 Print order payload and response for debugging
-    print(f"\n🔻 Placing {side.upper()} ORDER")
-    print("Request:", params)
-
     response = requests.post(url, data=params)
-    print("Response:", response.status_code, response.text)
-
     return response.json()
 
 @app.route("/", methods=["GET"])
@@ -50,9 +43,6 @@ def home():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
-
-    print("\n✅ Webhook received:", data)
-
     actions = data.get("actions", [])
     market = "BTCUSDT"
     amount = "0.001"
