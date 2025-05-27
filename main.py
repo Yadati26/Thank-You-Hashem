@@ -7,22 +7,18 @@ import os
 
 app = Flask(__name__)
 
-# CoinEx API credentials from environment
+# Corrected environment variable names
 ACCESS_ID = os.environ.get("COINEX_ACCESS_ID")
 SECRET_KEY = os.environ.get("COINEX_SECRET_KEY")
 
-# CoinEx API endpoints
 BASE_URL = "https://api.coinex.com/v1"
 
-# Sign API requests
 def sign(params):
     sorted_params = sorted(params.items())
     query_string = "&".join([f"{k}={v}" for k, v in sorted_params])
     to_sign = query_string + f"&secret_key={SECRET_KEY}"
-    signature = hashlib.md5(to_sign.encode()).hexdigest().upper()
-    return signature
+    return hashlib.md5(to_sign.encode()).hexdigest().upper()
 
-# Place a market order
 def place_order(market, side, amount):
     url = f"{BASE_URL}/order/market"
     params = {
