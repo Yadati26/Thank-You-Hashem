@@ -1,74 +1,65 @@
-from pathlib import Path
-
-code = '''
-import os
+from flask import Flask, request, jsonify
 import hmac
 import hashlib
 import time
-import json
-from flask import Flask, request
 import requests
+import os
 
 app = Flask(__name__)
 
-COINEX_API_KEY = os.getenv("COINEX_API_KEY")
-COINEX_SECRET_KEY = os.getenv("COINEX_SECRET_KEY")
+# CoinEx API credentials from environment
+ACCESS_ID = os.environ.get("COINEX_ACCESS_ID")
+SECRET_KEY = os.environ.get("COINEX_SECRET_KEY")
 
-def coinex_v2_request(method, path, payload=None):
-    url = f"https://api.coinex.com/v2/{path}"
-    timestamp = str(int(time.time() * 1000))
-    payload_str = json.dumps(payload) if payload else ""
-    signature_base = f"{timestamp}{path}{payload_str}".encode()
-    signature = hmac.new(COINEX_SECRET_KEY.encode(), signature_base, hashlib.sha256).hexdigest()
+# CoinEx API endpoints
+BASE_URL = "https://api.coinex.com/v1"
 
-    headers = {
-        "Content-Type": "application/json",
-        "X-CoinEx-Key": COINEX_API_KEY,
-        "X-CoinEx-Sign": signature,
-        "X-CoinEx-Timestamp": timestamp
+# Sign API requests
+def sign(params):
+    sorted_params = sorted(params.items())
+    query_string = "&".join([f"{k}={v}" for k, v in sorted_params])
+    to_sign = query_string + f"&secret_key={SECRET_KEY}"
+    signature = hashlib.md5(to_sign.encode()).hexdigest().upper()
+    return signature
+
+# Place a market order
+def place_order(market, side, amount):
+    url = f"{BASE_URL}/order/market"
+    params = {
+        "access_id": ACCESS_ID,
+        "market": market,
+        "type": side,
+        "amount": amount,
+        "tonce": int(time.time() * 1000),
     }
-
-    response = requests.request(method, url, headers=headers, data=payload_str)
+    params["sign"] = sign(params)
+    response = requests.post(url, data=params)
     return response.json()
+
+@app.route("/", methods=["GET"])
+def home():
+    return "Bot is live."
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    data = request.json
-    print(f"Received data: {data}")
-
+    data = request.get_json()
     actions = data.get("actions", [])
-    symbol = data.get("symbol", "")
-    amount = data.get("amount", 0)
+    market = "BTCUSDT"
+    amount = "0.001"
 
-    for action in actions:
-        if action.lower() == "buy":
-            payload = {
-                "market": symbol,
-                "amount": str(amount),
-                "price": "0",  # Market order
-                "type": "market",
-                "side": "buy"
-            }
-            res = coinex_v2_request("POST", "spot/order", payload)
-            print("Buy response:", res)
+    results = []
 
-        elif action.lower() == "close":
-            payload = {
-                "market": symbol,
-                "amount": str(amount),
-                "price": "0",  # Market order
-                "type": "market",
-                "side": "sell"
-            }
-            res = coinex_v2_request("POST", "spot/order", payload)
-            print("Sell response:", res)
+    if "close" in actions:
+        # Market sell to close position
+        res = place_order(market, "sell", amount)
+        results.append({"action": "close", "response": res})
 
-    return "ok", 200
+    if "buy" in actions:
+        # Market buy to open long
+        res = place_order(market, "buy", amount)
+        results.append({"action": "buy", "response": res})
+
+    return jsonify({"status": "success", "results": results})
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=10000)
-'''
-
-path = Path("/mnt/data/main.py")
-path.write_text(code)
-path
+    app.run(host="0.0.0.0", port=10000)
